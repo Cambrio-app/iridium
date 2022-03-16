@@ -34,8 +34,15 @@ class EpubScreen extends BookScreen {
     }
     return EpubScreen(key: key, asset: FileAsset(File(filePath)), location: location, settings: int.tryParse(settings ?? '100'), theme: decodedTheme,);
   }
-  factory EpubScreen.fromFile({Key? key, required File file, String? location}) {
-    return EpubScreen(key: key, asset: FileAsset(file), location: location);
+  factory EpubScreen.fromFile({Key? key, required File file, String? location, String? settings, String? theme}) {
+    Map<String,dynamic>? decodedTheme;
+    try {
+      decodedTheme = json.decode(theme!);
+    }
+    catch (e){
+      debugPrint('failure to decode theme: $e');
+    }
+    return EpubScreen(key: key, asset: FileAsset(file), location: location, settings: int.tryParse(settings ?? '100'), theme: decodedTheme,);
   }
   @override
   State<StatefulWidget> createState() => EpubScreenState();
