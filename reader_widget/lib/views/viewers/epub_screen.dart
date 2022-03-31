@@ -56,7 +56,7 @@ class EpubScreenState extends BookScreenState<EpubScreen, EpubController> {
   void initState() {
     super.initState();
     _viewerSettingsBloc = ViewerSettingsBloc(EpubReaderState("", widget.settings ?? 100));
-    debugPrint(widget.theme.toString());
+    // debugPrint(widget.theme.toString());
     _readerThemeBloc = ReaderThemeBloc(widget.theme!=null ? ReaderThemeConfig.fromJson(widget.theme!) : ReaderThemeConfig.defaultTheme);
   }
 
