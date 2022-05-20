@@ -15,7 +15,7 @@ import 'package:mno_shared/fetcher.dart';
 import 'package:mno_shared/mediatype.dart';
 import 'package:mno_shared/publication.dart';
 import 'package:mno_streamer/parser.dart';
-import 'package:universal_io/io.dart';
+import 'package:universal_io/io.dart' as uio;
 
 /// Inject the Readium CSS and JS links in a publication HTML resources.
 class HtmlInjector {
@@ -283,8 +283,8 @@ class _InjectHtmlResource extends TransformingResource {
     String? userPropertiesString;
     userPropertiesPath?.let((it) async {
       userPropertiesString = "";
-      File file = File(it);
-      if (FileSystemEntity.typeSync(it) == FileSystemEntityType.file &&
+      uio.File file = uio.File(it);
+      if (uio.FileSystemEntity.typeSync(it) == uio.FileSystemEntityType.file &&
           file.existsSync()) {
         userPropertiesString = await file.readAsString();
       }
