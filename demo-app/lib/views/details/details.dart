@@ -29,7 +29,7 @@ class Details extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _DetailsState createState() => _DetailsState();
+  State<StatefulWidget> createState() => _DetailsState();
 }
 
 class _DetailsState extends State<Details> {
@@ -37,7 +37,7 @@ class _DetailsState extends State<Details> {
   void initState() {
     super.initState();
     if (widget.publication != null) {
-      SchedulerBinding.instance?.addPostFrameCallback(
+      SchedulerBinding.instance.addPostFrameCallback(
         (_) {
           Provider.of<DetailsProvider>(context, listen: false)
               .setEntry(widget.publication);
@@ -50,11 +50,10 @@ class _DetailsState extends State<Details> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer<DetailsProvider>(
-      builder: (BuildContext context, DetailsProvider detailsProvider,
-          Widget? child) {
-        return Scaffold(
+  Widget build(BuildContext context) => Consumer<DetailsProvider>(
+        builder: (BuildContext context, DetailsProvider detailsProvider,
+                Widget? child) =>
+            Scaffold(
           appBar: AppBar(
             actions: <Widget>[
               IconButton(
@@ -97,102 +96,94 @@ class _DetailsState extends State<Details> {
               _buildMoreBook(detailsProvider),
             ],
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
 
-  _buildDivider() {
-    return Divider(
-      color: Theme.of(context).textTheme.caption?.color,
-    );
-  }
+  Widget _buildDivider() => Divider(
+        color: Theme.of(context).textTheme.caption?.color,
+      );
 
-  _buildImageTitleSection(DetailsProvider detailsProvider) {
-    return Row(
-      mainAxisSize: MainAxisSize.max,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Hero(
-          tag: widget.imgTag,
-          child: CachedNetworkImage(
-            imageUrl: '${widget.publication?.links[1].href}',
-            placeholder: (context, url) => const SizedBox(
+  Widget _buildImageTitleSection(DetailsProvider detailsProvider) => Row(
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Hero(
+            tag: widget.imgTag,
+            child: CachedNetworkImage(
+              imageUrl: '${widget.publication?.links[1].href}',
+              placeholder: (context, url) => const SizedBox(
+                height: 200.0,
+                width: 130.0,
+                child: LoadingWidget(),
+              ),
+              errorWidget: (context, url, error) => const Icon(Feather.x),
+              fit: BoxFit.cover,
               height: 200.0,
               width: 130.0,
-              child: LoadingWidget(),
             ),
-            errorWidget: (context, url, error) => const Icon(Feather.x),
-            fit: BoxFit.cover,
-            height: 200.0,
-            width: 130.0,
           ),
-        ),
-        const SizedBox(width: 20.0),
-        Flexible(
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const SizedBox(height: 5.0),
-              Hero(
-                tag: widget.titleTag,
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: Text(
-                    '${widget.publication?.metadata.title.replaceAll(r'\', '')}',
-                    style: const TextStyle(
-                      fontSize: 20.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 3,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 5.0),
-              Hero(
-                tag: widget.authorTag,
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: Text(
-                    '${widget.publication?.metadata.authors[0].name}',
-                    style: const TextStyle(
-                      fontSize: 16.0,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.grey,
+          const SizedBox(width: 20.0),
+          Flexible(
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const SizedBox(height: 5.0),
+                Hero(
+                  tag: widget.titleTag,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Text(
+                      '${widget.publication?.metadata.title.replaceAll(r'\', '')}',
+                      style: const TextStyle(
+                        fontSize: 20.0,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 3,
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 5.0),
-              _buildCategory(widget.publication, context),
-              Center(
-                child: SizedBox(
-                  height: 40.0,
-                  width: MediaQuery.of(context).size.width,
-                  child: _buildDownloadReadButton(detailsProvider, context),
+                const SizedBox(height: 5.0),
+                Hero(
+                  tag: widget.authorTag,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Text(
+                      '${widget.publication?.metadata.authors[0].name}',
+                      style: const TextStyle(
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 5.0),
+                _buildCategory(widget.publication, context),
+                Center(
+                  child: SizedBox(
+                    height: 40.0,
+                    width: MediaQuery.of(context).size.width,
+                    child: _buildDownloadReadButton(detailsProvider, context),
+                  ),
+                ),
+              ],
+            ),
           ),
+        ],
+      );
+
+  Widget _buildSectionTitle(String title) => Text(
+        title,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.secondary,
+          fontSize: 20.0,
+          fontWeight: FontWeight.bold,
         ),
-      ],
-    );
-  }
+      );
 
-  _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: TextStyle(
-        color: Theme.of(context).colorScheme.secondary,
-        fontSize: 20.0,
-        fontWeight: FontWeight.bold,
-      ),
-    );
-  }
-
-  _buildMoreBook(DetailsProvider provider) {
+  Widget _buildMoreBook(DetailsProvider provider) {
     if (provider.loading) {
       return const SizedBox(
         height: 100.0,
@@ -220,7 +211,7 @@ class _DetailsState extends State<Details> {
     }
   }
 
-  openBook(DetailsProvider provider) async {
+  Future openBook(DetailsProvider provider) async {
     List dlList = await provider.getDownload();
     if (dlList.isNotEmpty) {
       // dlList is a list of the downloads relating to this Book's id.
@@ -229,6 +220,9 @@ class _DetailsState extends State<Details> {
       // first value from the string as out local book path
       Map dl = dlList[0];
       String path = dl['path'];
+      if (!mounted) {
+        return;
+      }
       MyRouter.pushPage(
         context,
         EpubScreen(
@@ -238,7 +232,8 @@ class _DetailsState extends State<Details> {
     }
   }
 
-  _buildDownloadReadButton(DetailsProvider provider, BuildContext context) {
+  Widget _buildDownloadReadButton(
+      DetailsProvider provider, BuildContext context) {
     if (provider.downloaded) {
       return TextButton(
         onPressed: () => openBook(provider),
@@ -256,6 +251,7 @@ class _DetailsState extends State<Details> {
               widget.publication?.metadata.title != null) {
             provider.downloadFile(
               context,
+              this,
               epubDownloadLink.href,
               widget.publication!.metadata.title
                   .replaceAll(' ', '_')
@@ -270,7 +266,7 @@ class _DetailsState extends State<Details> {
     }
   }
 
-  _buildCategory(Publication? publication, BuildContext context) {
+  Widget _buildCategory(Publication? publication, BuildContext context) {
     if (publication == null) {
       return const SizedBox();
     } else {
@@ -321,7 +317,7 @@ class _DetailsState extends State<Details> {
     }
   }
 
-  _share() {
+  void _share() {
     // Share.text(
     //   '${widget.entry.title.t} by ${widget.entry.author.name.t}',
     //   'Read/Download ${widget.entry.title.t} from ${widget.entry.link[3].href}.',

@@ -2,31 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:mno_navigator/epub.dart';
 import 'package:mno_navigator/publication.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:mno_navigator/src/epub/callbacks/webview_listener.dart';
 
 class EpubCallbacks {
   final LauncherUIChannels _launcherUIChannels;
-  final GesturesChannels _gesturesChannels;
+  final ReadiumChannels _readiumGesturesChannels;
 
   set jsApi(JsApi jsApi) {
     _launcherUIChannels.jsApi = jsApi;
-    _gesturesChannels.jsApi = jsApi;
+    _readiumGesturesChannels.jsApi = jsApi;
   }
 
   EpubCallbacks(
       SpineItemContext spineItemContext,
       ViewerSettingsBloc? viewerSettingsBloc,
       ReaderAnnotationRepository? bookmarkRepository,
-      WebViewHorizontalGestureRecognizer? webViewHorizontalGestureRecognizer)
-      : _launcherUIChannels =
-            LauncherUIChannels(spineItemContext, bookmarkRepository),
-        _gesturesChannels = GesturesChannels(spineItemContext,
-            viewerSettingsBloc, webViewHorizontalGestureRecognizer);
+      WebViewHorizontalGestureRecognizer? webViewHorizontalGestureRecognizer,
+      WebViewListener listener)
+      : _launcherUIChannels = LauncherUIChannels(),
+        _readiumGesturesChannels = ReadiumChannels(
+            spineItemContext,
+            bookmarkRepository,
+            viewerSettingsBloc,
+            webViewHorizontalGestureRecognizer,
+            listener);
 
-  Set<JavascriptChannel> get channels => [
-        _launcherUIChannels,
-        _gesturesChannels
-      ].expand((c) => c.channels).toSet();
+  Map<String, JavaScriptHandlerCallback> get channels => {
+        ..._launcherUIChannels.channels,
+        ..._readiumGesturesChannels.channels,
+      };
 }

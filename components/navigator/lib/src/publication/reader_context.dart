@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:dartx/dartx.dart';
+import 'package:dfunc/dfunc.dart';
 import 'package:flutter/material.dart';
 import 'package:mno_navigator/epub.dart';
 import 'package:mno_navigator/publication.dart';
@@ -46,6 +47,7 @@ class ReaderContext {
   late Map<Type, ReaderCommandProcessor> readerCommandProcessors;
   Link? currentSpineItem;
   SpineItemContext? currentSpineItemContext;
+  SelectionListenerFactory selectionListenerFactory;
 
   ReadingProgression? readingProgression;
 
@@ -63,6 +65,20 @@ class ReaderContext {
       StreamController.broadcast();
 
   Stream<bool> get toolbarStream => _toolbarStreamController.stream;
+
+  int _viewportWidth = 0;
+
+  int get viewportWidth => _viewportWidth;
+
+  set viewportWidth(int viewportWidth) {
+    _viewportWidth = viewportWidth;
+    _viewportWidthController.add(viewportWidth);
+  }
+
+  final StreamController<int> _viewportWidthController =
+      StreamController.broadcast();
+
+  Stream<int> get viewportWidthStream => _viewportWidthController.stream;
 
   ReaderCommand? readerCommand;
 
@@ -89,9 +105,12 @@ class ReaderContext {
     required this.location,
     required this.readerAnnotationRepository,
     Map<Type, ReaderCommandProcessor> readerCommandProcessorMap = const {},
+    SelectionListenerFactory? selectionListenerFactory,
   })  : assert(userException != null || publication != null),
         spineItemContextMap = {},
-        toolbarVisibility = false {
+        toolbarVisibility = false,
+        this.selectionListenerFactory =
+            selectionListenerFactory ?? SimpleSelectionListenerFactory() {
     readerCommandProcessors = Map.of(_defaultReaderCommandProcessors)
       ..addAll(readerCommandProcessorMap);
     _tableOfContents = publication?.tableOfContents ?? [];
@@ -101,15 +120,13 @@ class ReaderContext {
             publication, _flattenedTableOfContents);
     _toolbarStreamController.add(toolbarVisibility);
     currentSpineItem = publication?.readingOrder.first;
-    readerCommand = GoToLocationCommand.readiumLocation(readiumLocation);
-    // execute(GoToLocationCommand.readiumLocation(readiumLocation));
+    readerCommand = locator?.let((it) => GoToLocationCommand.locator(it));
     readingProgression = publication?.metadata.effectiveReadingProgression;
   }
 
   bool get hasError => userException != null;
 
-  ReadiumLocation get readiumLocation =>
-      ReadiumLocation.createLocation(location);
+  Locator? get locator => location?.let((it) => Locator.fromJsonString(it));
 
   int get currentPageNumber =>
       publication!.paginationInfo[currentSpineItem]?.firstPageNumber ?? 1;
@@ -131,7 +148,12 @@ class ReaderContext {
     _toolbarStreamController.add(toolbarVisibility);
   }
 
-  void toggleBookmark() => currentSpineItemContext?.jsApi?.toggleBookmark();
+  void toggleBookmark() {
+    PaginationInfo? paginationInfo = this.paginationInfo;
+    if (paginationInfo != null) {
+      readerAnnotationRepository.createBookmark(paginationInfo);
+    }
+  }
 
   List<String> getElementIdsFromSpineItem(int spineItemIndex) =>
       getTocItemsFromSpineItem(spineItemIndex)
@@ -148,8 +170,6 @@ class ReaderContext {
   }
 
   void notifyCurrentLocation(PaginationInfo paginationInfo, Link spineItem) {
-    // currentSpineItemContext!.jsApi!.openPage(OpenPageRequest.fromIdrefAndCfi(
-    //     readiumLocation.idref, readiumLocation.contentCFI));
     this.paginationInfo = paginationInfo;
     this.currentSpineItem = spineItem;
     _currentLocationController.add(paginationInfo);
@@ -163,7 +183,7 @@ class ReaderContext {
     _createOpenPageRequestForCommand(command);
     this.readerCommand = command;
     // Fimber.d("readerCommand: $readerCommand");
-    _commandsStreamController.sink.add(command);
+    _commandsStreamController.add(command);
   }
 
   void _updateSpineItemIndexForCommand(ReaderCommand command) {

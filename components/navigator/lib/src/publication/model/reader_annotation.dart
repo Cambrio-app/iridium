@@ -6,14 +6,18 @@ import 'package:mno_navigator/publication.dart';
 import 'package:mno_shared/publication.dart';
 
 class ReaderAnnotation {
-  String id;
-
+  final String id;
   String location;
+  String? annotation;
+  HighlightStyle? style;
+  int? tint;
   final AnnotationType annotationType;
 
-  ReaderAnnotation(this.id, this.location, this.annotationType);
+  ReaderAnnotation(this.id, this.location, this.annotationType,
+      {this.style, this.tint});
 
-  ReaderAnnotation.locator(this.id, Locator locator, this.annotationType)
+  ReaderAnnotation.locator(this.id, Locator locator, this.annotationType,
+      {this.style, this.tint})
       : location = locator.json;
 
   Locator? get locator => Locator.fromJsonString(location);
@@ -25,6 +29,10 @@ class ReaderAnnotation {
   bool get isBookmark => annotationType == AnnotationType.bookmark;
 
   @override
-  String toString() =>
-      'Bookmark{id: $id, location: $location, annotationType: $annotationType}';
+  String toString() => '$runtimeType{id: $id, '
+      'location: $location, '
+      'annotation: $annotation, '
+      'style: $style, '
+      'tint: $tint, '
+      'annotationType: $annotationType}';
 }

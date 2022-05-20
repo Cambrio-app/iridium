@@ -32,11 +32,12 @@ class CbzController extends PublicationController {
           streamerFuture,
           readerAnnotationRepository,
           handlersProvider,
+          true,
         );
 
   PageController get pageController => _pageController!;
 
-  @overrideReaderAnnotation
+  @override
   void jumpToPage(int page) => _pageController?.jumpToPage(page);
 
   @override
@@ -47,12 +48,24 @@ class CbzController extends PublicationController {
       PageController(keepPage: true, initialPage: initialPage);
 
   @override
-  void onSkipLeft() => _pageController?.previousPage(
-      duration: const Duration(milliseconds: 300), curve: Curves.easeIn);
+  void onSkipLeft({bool animated = true}) {
+    if (animated) {
+      _pageController?.previousPage(
+          duration: const Duration(milliseconds: 300), curve: Curves.easeIn);
+    } else {
+      _pageController?.jumpToPage((_pageController!.page ?? 0).round() - 1);
+    }
+  }
 
   @override
-  void onSkipRight() => _pageController?.nextPage(
-      duration: const Duration(milliseconds: 300), curve: Curves.easeIn);
+  void onSkipRight({bool animated = true}) {
+    if (animated) {
+      _pageController?.nextPage(
+          duration: const Duration(milliseconds: 300), curve: Curves.easeIn);
+    } else {
+      _pageController?.jumpToPage((_pageController!.page ?? 0).round() + 1);
+    }
+  }
 
   @override
   void onPageChanged(int position) {
@@ -61,27 +74,20 @@ class CbzController extends PublicationController {
     Link spineItem = spine[position];
     LinkPagination linkPagination = publication.paginationInfo[spineItem]!;
     Map data = {
-      "spineItem": {
-        "idref": spineItem.href,
-        "href": spineItem.href,
-      },
       "location": {
-        "version": ReadiumLocation.currentVersion,
         "idref": spineItem.href,
+        "progression": 0.0,
       },
-      "openPages": [
-        {
-          "spineItemPageIndex": 0,
-          "spineItemPageCount": 1,
-          "idref": spineItem.href,
-          "spineItemIndex": position,
-        },
-      ],
+      "openPage": {
+        "spineItemPageIndex": 0,
+        "spineItemPageCount": 1,
+      },
     };
     String json = const JsonCodec().encode(data);
+    Locator locator = spineItem.toLocator();
     try {
       PaginationInfo paginationInfo =
-          PaginationInfo.fromJson(json, linkPagination);
+          PaginationInfo.fromJson(json, position, locator, linkPagination);
       readerContext!.notifyCurrentLocation(paginationInfo, spineItem);
     } catch (e, stacktrace) {
       Fimber.d("error: $e", ex: e, stacktrace: stacktrace);

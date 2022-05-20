@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:dartx/dartx.dart';
+import 'package:fimber/fimber.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mno_navigator/epub.dart';
 import 'package:mno_navigator/publication.dart';
@@ -23,6 +24,7 @@ class EpubController extends PublicationController {
     Future<Streamer> streamerFuture,
     ReaderAnnotationRepository readerAnnotationRepository,
     Function0<List<RequestHandler>> handlersProvider,
+    SelectionListenerFactory? selectionListenerFactory,
   )   : widgetKeepAliveListener = WidgetKeepAliveListener(),
         super(
           onServerClosed,
@@ -32,9 +34,15 @@ class EpubController extends PublicationController {
           streamerFuture,
           readerAnnotationRepository,
           handlersProvider,
+          true,
+          selectionListenerFactory,
         );
 
   PreloadPageController get pageController => _pageController!;
+
+  /// false if progression is null: we make the assumption that it is ltr
+  bool get isReverseOrder =>
+      readerContext?.readingProgression?.isReverseOrder() ?? false;
 
   @override
   void jumpToPage(int page) => _pageController?.jumpToPage(page);
@@ -51,7 +59,7 @@ class EpubController extends PublicationController {
       viewportFraction: 0.99);
 
   @override
-  void onSkipLeft() {
+  void onSkipLeft({bool animated = true}) {
     /*
         R2 - EpubNavigatorFragment:
         override fun goBackward(animated: Boolean, completion: () -> Unit): Boolean {
@@ -61,15 +69,25 @@ class EpubController extends PublicationController {
         etc.
       }
      */
-    var fn = readerContext?.readingProgression?.isReverseOrder() ??
-            false // false if progression is null: we make the assumption that it is ltr
-        ? _pageController?.nextPage
-        : _pageController?.previousPage;
-    skip(fn);
+    PreloadPageController? pageController = _pageController;
+    Fimber.d("animated: $animated");
+    if (pageController != null) {
+      if (animated) {
+        var fn = isReverseOrder
+            ? _pageController?.nextPage
+            : _pageController?.previousPage;
+        skip(fn);
+      } else {
+        int page =
+            (pageController.page ?? 0).round() + (isReverseOrder ? 1 : -1);
+        Fimber.d("page: $page");
+        pageController.jumpToPage(page);
+      }
+    }
   }
 
   @override
-  void onSkipRight() {
+  void onSkipRight({bool animated = true}) {
     /*
         R2 - EpubNavigatorFragment:
         override fun goForward(animated: Boolean, completion: () -> Unit): Boolean {
@@ -79,11 +97,21 @@ class EpubController extends PublicationController {
           etc.
       }
      */
-    var fn = readerContext?.readingProgression?.isReverseOrder() ??
-            false // false if progression is null: we make the assumption that it is ltr
-        ? _pageController?.previousPage
-        : _pageController?.nextPage;
-    skip(fn);
+    PreloadPageController? pageController = _pageController;
+    Fimber.d("animated: $animated");
+    if (pageController != null) {
+      if (animated) {
+        var fn = isReverseOrder
+            ? pageController.previousPage
+            : pageController.nextPage;
+        skip(fn);
+      } else {
+        int page =
+            (pageController.page ?? 0).round() + (isReverseOrder ? -1 : 1);
+        Fimber.d("page: $page");
+        pageController.jumpToPage(page);
+      }
+    }
   }
 
   void skip(

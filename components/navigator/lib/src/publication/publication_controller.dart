@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:dartx/dartx.dart';
+import 'package:dfunc/dfunc.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mno_navigator/epub.dart';
 import 'package:mno_navigator/publication.dart';
@@ -14,7 +15,7 @@ import 'package:mno_shared/epub.dart';
 import 'package:mno_shared/publication.dart';
 import 'package:mno_streamer/parser.dart';
 
-abstract class PublicationController {
+abstract class PublicationController extends NavigationController {
   final Function onServerClosed;
   final Function? onPageJump;
   final Future<String?> locationFuture;
@@ -24,6 +25,7 @@ abstract class PublicationController {
   final Function0<List<RequestHandler>> handlersProvider;
   final ServerBloc serverBloc;
   final CurrentSpineItemBloc currentSpineItemBloc;
+  final SelectionListenerFactory? selectionListenerFactory;
   ReaderContext? readerContext;
 
   StreamSubscription<ReaderCommand>? readerCommandSubscription;
@@ -35,8 +37,10 @@ abstract class PublicationController {
     this.fileAsset,
     this.streamerFuture,
     this.readerAnnotationRepository,
-    this.handlersProvider,
-  )   : serverBloc = ServerBloc(),
+    this.handlersProvider, [
+    bool startHttpServer = true,
+    this.selectionListenerFactory,
+  ])  : serverBloc = ServerBloc(startHttpServer: startHttpServer),
         currentSpineItemBloc = CurrentSpineItemBloc();
 
   void init() {
@@ -52,9 +56,17 @@ abstract class PublicationController {
 
   String get serverAddress => serverBloc.address;
 
-  void startServer() => serverBloc.add(StartServer(handlersProvider()));
+  void startServer() {
+    if (!serverBloc.isClosed) {
+      serverBloc.add(StartServer(handlersProvider()));
+    }
+  }
 
-  void stopServer() => serverBloc.add(ShutdownServer());
+  void stopServer() {
+    if (!serverBloc.isClosed) {
+      serverBloc.add(ShutdownServer());
+    }
+  }
 
   Publication get publication => readerContext!.publication!;
 
@@ -85,25 +97,22 @@ abstract class PublicationController {
       publication: publication,
       location: location,
       readerAnnotationRepository: readerAnnotationRepository,
+      selectionListenerFactory: selectionListenerFactory,
     );
   }
 
   void initReaderContext(ReaderContext readerContext) {
     this.readerContext = readerContext;
-    int initialPage = _initPageFromLocation(readerContext.readiumLocation);
+    int initialPage =
+        readerContext.locator?.let((it) => _initPageFromLocation(it)) ?? 0;
     initPageController(initialPage);
     onPageChanged(initialPage);
   }
 
-  int _initPageFromLocation(ReadiumLocation readiumLocation) {
-    int page = 0;
-    page = publication.readingOrder
-        .indexWhere((link) => link.id == readiumLocation.idref);
-    if (page < 0) {
-      page = publication.pageList
-          .indexWhere((link) => link.id == readiumLocation.idref);
-    }
-    return max(0, page);
+  int _initPageFromLocation(Locator locator) {
+    int? page = publication.readingOrder.indexOfFirstWithHref(locator.href) ??
+        publication.pageList.indexOfFirstWithHref(locator.href);
+    return max(0, page ?? -1);
   }
 
   void jumpToPage(int page);
@@ -111,10 +120,6 @@ abstract class PublicationController {
   bool get pageControllerAttached;
 
   void initPageController(int initialPage);
-
-  void onSkipRight();
-
-  void onSkipLeft();
 
   void onPageChanged(int position) =>
       currentSpineItemBloc.add(CurrentSpineItemEvent(position));
@@ -124,7 +129,7 @@ abstract class PublicationController {
     readerCommandSubscription =
         readerContext.commandsStream.listen(_onReaderCommand);
     if (readerContext.location != null) {
-      readerContext.execute(GoToLocationCommand(readerContext.location));
+      readerContext.execute(GoToLocationCommand(readerContext.location!));
     }
   }
 
